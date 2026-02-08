@@ -1,0 +1,440 @@
+  {% liquid
+    assign max_items = section.settings.max_products
+    assign selected_collection = section.settings.collection
+  %}
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <div class="section-background color-{{ section.settings.color_scheme }}"></div>
+  <div
+    data-testid="product-list"
+    class="
+      section
+      section--{{ section.settings.section_width }}
+      color-{{ section.settings.color_scheme }}
+      section-resource-list
+      spacing-style
+      gap-style
+    "
+    style="
+      {% render 'spacing-style', settings: section.settings %}
+      {% render 'gap-style', value: section.settings.gap %}
+      --columns: {{ section.settings.columns }};
+      --mobile-columns: {{ section.settings.mobile_columns }};
+    "
+  >
+    <div class="section-resource-list__header">
+      {%- content_for 'block', type: '_product-list-content', id: 'static-header' -%}
+    </div>
+
+    {% capture list_items %}
+      {%- if selected_collection != blank and selected_collection.all_products_count > 0 -%}
+        {%- for product in selected_collection.products limit: max_items -%}
+          <div class="resource-list__item card-wrapper custom-product-card">
+            <div class="product-info-top">
+              <div class="product-image-container-wrapper">
+                {%- comment -%} Product Image and Base Info {%- endcomment -%}
+                {% content_for 'block', type: '_product-card', id: 'static-product-card', closest.product: product %}
+                
+                {%- comment -%} Discount Badge calculation {%- endcomment -%}
+                {%- if product.compare_at_price > product.price -%}
+                  {%- assign savings = product.compare_at_price | minus: product.price | times: 100.0 | divided_by: product.compare_at_price | round -%}
+                  <span class="custom-discount-badge">{{ savings }}% OFF</span>
+                {%- endif -%}
+              </div>
+            </div>
+            
+            {% comment %} <div class="custom-add-to-cart-wrapper">
+              <form method="post" action="/cart/add" class="product-form">
+                <input type="hidden" name="id" value="{{ product.variants.first.id }}" />
+                <button type="submit" class="full-width-atc-btn">
+                  ADD TO CART
+                </button>
+              </form>
+            </div> {% endcomment %}
+            <div class="custom-add-to-cart-wrapper">
+  <button
+    type="button"
+    class="full-width-atc-btn js-add-to-cart"
+    data-variant-id="{{ product.selected_or_first_available_variant.id }}"
+    {% unless product.selected_or_first_available_variant.available %}
+      disabled
+    {% endunless %}
+  >
+    {% if product.selected_or_first_available_variant.available %}
+      ADD TO CART
+    {% else %}
+      SOLD OUT
+    {% endif %}
+  </button>
+</div>
+
+          </div>
+        {%- endfor -%}
+      {%- else -%}
+        {%- for i in (1..max_items) -%}
+          <div class="resource-list__item placeholder-card custom-product-card">
+            <div class="product-info-top">
+              <div class="product-image-container-wrapper">
+                {% content_for 'block', type: '_product-card', id: 'static-product-card', closest.product: null %}
+                <span class="custom-discount-badge">0% OFF</span>
+              </div>
+            </div>
+            <div class="custom-add-to-cart-wrapper">
+              <button class="full-width-atc-btn" disabled>ADD TO CART</button>
+            </div>
+          </div>
+        {%- endfor -%}
+      {%- endif -%}
+    {% endcapture %}
+
+    {% liquid
+      assign list_items_array = list_items | strip | split: ''
+    %}
+
+    <div class="product-grid-container">
+      {% render 'resource-list',
+        list_items: list_items,
+        list_items_array: list_items_array,
+        settings: section.settings,
+        slide_count: max_items,
+        content_type: 'products',
+        test_id: 'resource-list-grid'
+      %}
+    </div>
+
+    <div
+      class="section-resource-list__content"
+      style="--horizontal-alignment: {{ section.settings.horizontal_alignment }}; margin-top: 20px;"
+    >
+      {%- content_for 'blocks' -%}
+    </div>
+  </div>
+
+  <style>
+    .product-grid-container {
+      width: 100%;
+      display: block;
+    }
+    
+    .custom-product-card {
+      display: flex !important;
+      flex-direction: column !important;
+      height: 100%;
+      background: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+      position: relative;
+    }
+
+    .custom-product-card .price, 
+    .custom-discount-badge {
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 700 !important; /* Bold for prices */
+    }
+
+    .product-image-container-wrapper {
+      position: relative;
+      width: 100%;
+      overflow: hidden; /* Ye sabse zaroori hai animation ko box ke andar rakhne ke liye */
+    }
+
+    /* Normal state: Image ka size normal aur transition smooth */
+    .product-image-container-wrapper img {
+        transition: transform 0.5s ease-in-out !important; /* Bella Vita jaisa smooth feel dene ke liye */
+    }
+
+    /* Hover state: Jab card par mouse jaye to image halki si zoom ho */
+    .custom-product-card:hover .product-image-container-wrapper img {
+        transform: scale(1.03); /* 1.1 ka matlab hai 10% zoom. Aap ise 1.05 bhi kar sakte hain agar zyada halka rakhna ho */
+    }
+
+    /* Image ke left bottom me discount badge */
+    .custom-discount-badge {
+      position: absolute;
+      bottom: 59px;
+      left: 8px;
+      background-color: #79c5b4; /* Green shade from your image */
+      color: white;
+      padding: 1px 8px;
+      font-size: 11px;
+      font-weight: 600 !important;
+      border-radius: 2px;
+      z-index: 2;
+    }
+
+    {% comment %} .custom-product-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    } {% endcomment %}
+
+    /* Title ko single line mein karne ke liye */
+    .custom-product-card [class*="title"], 
+    .custom-product-card h3, 
+    .custom-product-card .product-card__title {
+      display: block !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      margin-bottom: 8px !important;
+      {% comment %} font-size: 14px !important; {% endcomment %}
+      line-height: 1.2 !important;
+
+      font-family: 'Montserrat', sans-serif !important;
+      font-weight: 600 !important; /* Semi-bold look */
+      font-size: 14px !important;
+      color: #1a1a1a !important;
+      text-transform: capitalize !important; /* Har word ka pehla letter capital */
+    }
+
+    .product-info-top {
+      flex-grow: 1;
+    }
+
+    .custom-add-to-cart-wrapper {
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    .full-width-atc-btn {
+      width: 100%;
+      background-color: #121212;
+      color: #ffffff;
+      border: none;
+      padding: 14px 10px;
+      {% comment %} font-size: 13px; {% endcomment %}
+      {% comment %} font-weight: 700;  {% endcomment %}
+      {% comment %} text-transform: uppercase; {% endcomment %}
+      cursor: pointer;
+      border-radius: 4px;
+      {% comment %} letter-spacing: 1px; {% endcomment %}
+      transition: background 0.3s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+
+      font-family: 'Montserrat', sans-serif !important;
+      font-weight: 800 !important; 
+      font-size: 12px !important;
+      letter-spacing: 1px !important; /* Aksharon ke beech thoda gap */
+      text-transform: uppercase !important;
+    }
+
+    .full-width-atc-btn:hover {
+      background-color: #333;
+    }
+
+    @media screen and (max-width: 749px) {
+      .full-width-atc-btn {
+        padding: 10px 5px;
+        font-size: 11px;
+      }
+      .custom-discount-badge {
+        font-size: 9px;
+        padding: 1px 6px;
+      }
+    }
+  </style>
+
+
+  {% schema %}
+    {
+      "name": "t:names.product_list",
+      "class": "ui-test-product-list",
+      "blocks": [
+        { "type": "@theme" },
+        { "type": "@app" },
+        { "type": "_divider" }
+      ],
+      "settings": [
+        {
+          "type": "collection",
+          "id": "collection",
+          "label": "Select Collection"
+        },
+        {
+          "type": "select",
+          "id": "layout_type",
+          "label": "Layout Type",
+          "options": [
+            { "value": "grid", "label": "Grid" },
+            { "value": "carousel", "label": "Carousel" },
+            { "value": "editorial", "label": "Editorial" }
+          ],
+          "default": "grid"
+        },
+        {
+          "type": "range",
+          "id": "max_products",
+          "label": "Total Products to Show",
+          "min": 2,
+          "max": 16,
+          "step": 1,
+          "default": 4
+        },
+        {
+          "type": "range",
+          "id": "columns",
+          "label": "Desktop Columns",
+          "min": 1,
+          "max": 6,
+          "step": 1,
+          "default": 4
+        },
+        {
+          "type": "select",
+          "id": "mobile_columns",
+          "label": "Mobile Columns",
+          "options": [
+            { "value": "1", "label": "1 Column" },
+            { "value": "2", "label": "2 Columns" }
+          ],
+          "default": "2"
+        },
+        {
+          "type": "color_scheme",
+          "id": "color_scheme",
+          "label": "Color Scheme",
+          "default": "scheme-1"
+        },
+        {
+          "type": "header",
+          "content": "Spacing"
+        },
+        {
+          "type": "range",
+          "id": "padding-block-start",
+          "label": "Top Padding",
+          "min": 0,
+          "max": 100,
+          "default": 40,
+          "unit": "px"
+        },
+        {
+          "type": "range",
+          "id": "padding-block-end",
+          "label": "Bottom Padding",
+          "min": 0,
+          "max": 100,
+          "default": 40,
+          "unit": "px"
+        }
+      ],
+      "presets": [
+        {
+          "name": "Featured Product Grid",
+          "settings": {
+            "max_products": 4,
+            "columns": 4
+          }
+        }
+      ]
+    }
+  {% endschema %}
+
+  {% comment %} <script>
+document.addEventListener('click', async function (e) {
+  const btn = e.target.closest('.js-add-to-cart');
+  if (!btn) return;
+
+  e.preventDefault();
+
+  const variantId = btn.dataset.variantId;
+  if (!variantId) return;
+
+  btn.disabled = true;
+  const originalText = btn.innerText;
+  btn.innerText = 'ADDING…';
+
+  try {
+    /* 1️⃣ ADD TO CART */
+    await fetch('/cart/add.js', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        id: variantId,
+        quantity: 1
+      })
+    });
+
+    /* 2️⃣ RE-RENDER DAWN SECTIONS */
+    const res = await fetch('/?sections=cart-drawer,cart-icon-bubble');
+    const sections = await res.json();
+
+    /* 3️⃣ UPDATE CART DRAWER HTML */
+    const cartDrawer = document.querySelector('cart-drawer');
+    if (cartDrawer && sections['cart-drawer']) {
+      cartDrawer.innerHTML = sections['cart-drawer'];
+      cartDrawer.open();
+    }
+
+    /* 4️⃣ UPDATE CART ICON */
+    const cartBubble = document.querySelector('.cart-count-bubble');
+    if (cartBubble && sections['cart-icon-bubble']) {
+      const bubbleHtml = new DOMParser()
+        .parseFromString(sections['cart-icon-bubble'], 'text/html')
+        .querySelector('.cart-count-bubble');
+      if (bubbleHtml) {
+        cartBubble.innerHTML = bubbleHtml.innerHTML;
+      }
+    }
+
+    btn.innerText = 'ADDED ✓';
+
+    setTimeout(() => {
+      btn.innerText = originalText;
+      btn.disabled = false;
+    }, 1200);
+
+  } catch (err) {
+    console.error(err);
+    btn.innerText = 'ERROR';
+    btn.disabled = false;
+  }
+});
+</script> {% endcomment %}
+
+<script>
+document.addEventListener('click', async function (e) {
+  const btn = e.target.closest('.js-add-to-cart');
+  if (!btn) return;
+
+  e.preventDefault();
+
+  const variantId = btn.dataset.variantId;
+  if (!variantId) return;
+
+  btn.disabled = true;
+  btn.innerText = 'ADDING…';
+
+  try {
+    await fetch('/cart/add.js', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        id: variantId,
+        quantity: 1
+      })
+    });
+
+    /* ✅ SIMPLE PAGE RELOAD */
+    window.location.reload();
+
+  } catch (err) {
+    console.error(err);
+    btn.innerText = 'ERROR';
+    btn.disabled = false;
+  }
+});
+</script>
+
+
+
+
