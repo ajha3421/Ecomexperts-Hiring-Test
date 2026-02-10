@@ -1,1 +1,271 @@
+<section class="lookbook-section" id="lookbook-{{ section.id }}">
+  <div class="container">
+    <h2 class="lookbook-heading">{{ section.settings.title }}</h2>
 
+    <div class="lookbook-grid">
+      {% for block in section.blocks %}
+        <div class="lookbook-item">
+          <img src="{{ block.settings.image | image_url: width: 800 }}" alt="Lookbook" loading="lazy">
+          {% if block.settings.product != blank %}
+            <button class="plus-icon" data-product-handle="{{ block.settings.product.handle }}">
+              <span>+</span>
+            </button>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div id="product-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <div id="modal-product-inner"></div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .lookbook-section { padding: 40px 20px; font-family: sans-serif; }
+  .lookbook-heading { font-size: 20px; font-weight: 400; margin-bottom: 25px; }
+  .lookbook-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+  .lookbook-item { position: relative; line-height: 0; }
+  .lookbook-item img { width: 100%; height: auto; object-fit: cover; }
+
+  .plus-icon {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(255,255,255,0.9); border: none; border-radius: 50%;
+    width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 18px;
+  }
+
+  .modal { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); }
+  .modal-content { 
+    background: #fff; margin: 5% auto; padding: 30px; width: 90%; max-width: 450px; 
+    position: relative; border-radius: 5px; 
+  }
+  .close-modal {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    {% comment %} font-size: 24px;
+    cursor: pointer;
+    z-index: 10;  {% endcomment %}
+
+    font-size: 22px;
+    cursor: pointer;
+    z-index: 10;
+    background: white;
+    box-shadow: 1px 1px 10px #0000002e;
+    padding: 0px 11px;
+    border: 1px solid #75757547;
+    border-radius: 100%;
+  }
+
+  .modal-product-container { display: flex; flex-direction: column; gap: 20px; }
+  .modal-top-row { display: flex; gap: 20px; }
+  .modal-img { width: 140px; height: 160px; object-fit: cover;     border-radius: 5px;}
+  .modal-info { flex: 1; }
+  .modal-info h3 { font-size: 18px; margin: 0 0 10px; font-weight: 400; }
+  .modal-price { font-size: 18px; margin-bottom: 10px; }
+  .modal-desc { font-size: 12px; color: #444; line-height: 1.4; margin: 0; }
+
+  .selector-label { font-size: 13px; margin: 15px 0 5px; color: #666; }
+  .color-swatch-container { display: flex; gap:10px; margin-bottom: 10px; }
+  .color-option { 
+    flex: 1; padding: 10px; text-align: center;
+    cursor: pointer; font-size: 14px; background: #fff; color: #000;
+    border: 1px solid black;
+    border-radius: 5px;
+  }
+  
+  .color-option.active { 
+    background: #000 !important; 
+    color: #fff !important; 
+    font-weight: bold; 
+  }
+  
+  .size-dropdown { 
+    width: 100%; padding: 12px; border: 1px solid #ccc; outline: none; border-radius: 5px;
+    appearance: none; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>') no-repeat right 15px center;
+  }
+  .size-dropdown option{
+    background: grey;
+    border: 1px solid #80808029;;
+    border-radius: 5px;
+  }
+
+  /* --- ADD TO CART CENTERED ALIGNMENT FIX --- */
+  .add-to-cart-btn {
+    background: #000; color: #fff; width: 100%; padding: 15px 20px; 
+    border: none; border-radius: 5px; margin-top: 20px; cursor: pointer;
+    display: flex; align-items: center;
+    justify-content: center;
+    font-weight: bold; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* Isse text center mein rehta hai */
+  .btn-text-center {
+    flex-grow: 0.5;
+    text-align: center;
+  }
+
+  .btn-arrow-right {
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    font-weight: normal;
+    font-size: 25px;
+    width: 40px; /* Fixed width for arrow area */
+    {% comment %} justify-content: flex-end; {% endcomment %}
+  }
+
+  .add-to-cart-btn {
+    transition: all 0.3s ease;
+  }
+  .add-to-cart-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) { .lookbook-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+
+<script>
+  let activeProduct = null;
+
+  document.querySelectorAll('.plus-icon').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const handle = this.dataset.productHandle;
+      fetch(`/products/${handle}.js`)
+        .then(res => res.json())
+        .then(product => {
+          activeProduct = product;
+          renderProductModal(product);
+          document.getElementById('product-modal').style.display = "block";
+        });
+    });
+  });
+
+  function renderProductModal(product) {
+    const container = document.getElementById('modal-product-inner');
+    const colorOption = product.options.find(opt => opt.name === 'Color' || opt.name === 'color');
+    const colors = colorOption ? colorOption.values : [];
+
+    container.innerHTML = `
+      <div class="modal-product-container">
+        <div class="modal-top-row">
+          <img src="${product.featured_image}" class="modal-img" id="modal-main-img">
+          <div class="modal-info">
+            <h3>${product.title}</h3>
+            <div class="modal-price" id="modal-price">${(product.price / 100).toFixed(2)}€</div>
+            <p class="modal-desc">${product.description.replace(/<\/?[^>]+(>|$)/g, "").substring(0, 100)}...</p>
+          </div>
+        </div>
+
+        <div class="product-form">
+          ${colors.length > 0 ? `
+            <div class="selector-label">Color</div>
+            <div class="color-swatch-container">
+              ${colors.map((color, index) => `
+                <div class="color-option ${index === 0 ? 'active' : ''}" 
+                    onclick="handleColorChange('${color}', this)">
+                  ${color}
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          <div class="selector-label">Size</div>
+          <select class="size-dropdown" id="modal-variant-select">
+            ${product.variants.map(v => `<option value="${v.id}">${v.title}</option>`).join('')}
+          </select>
+
+          <button class="add-to-cart-btn" onclick="addToCart()">
+            <span class="btn-text-center">ADD TO CART</span>
+            <span class="btn-arrow-right">→</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    if (colors.length > 0) {
+      handleColorChange(colors[0], container.querySelector('.color-option'));
+    }
+  }
+
+  function handleColorChange(selectedColor, element) {
+    const parent = element.parentElement;
+    parent.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+    element.classList.add('active');
+
+    const variantSelect = document.getElementById('modal-variant-select');
+    variantSelect.innerHTML = ''; 
+
+    const filtered = activeProduct.variants.filter(v => v.options.includes(selectedColor));
+
+    filtered.forEach((v, index) => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      opt.text = v.title;
+      variantSelect.appendChild(opt);
+
+      if (index === 0) {
+        if (v.featured_image) document.getElementById('modal-main-img').src = v.featured_image.src;
+        document.getElementById('modal-price').innerText = (v.price / 100).toFixed(2) + '€';
+      }
+    });
+  }
+
+  function addToCart() {
+    const variantId = document.getElementById('modal-variant-select').value;
+    let formData = { 'items': [{ 'id': parseInt(variantId), 'quantity': 1 }] };
+    
+    fetch('/cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    })
+    .then(res => res.json())
+    .then(data => { 
+      document.getElementById('product-modal').style.display = "none";
+      const cartNotification = document.querySelector('cart-notification') || document.querySelector('cart-drawer');
+      
+      if (cartNotification) {
+        cartNotification.renderContents(data); 
+      } else {
+        location.reload(); 
+      }
+    })
+    .catch(err => console.error('Error:', err));
+  }
+
+  document.querySelector('.close-modal').onclick = () => {
+    document.getElementById('product-modal').style.display = "none";
+  };
+
+  window.onclick = (event) => {
+    const modal = document.getElementById('product-modal');
+    if (event.target == modal) modal.style.display = "none";
+  };
+</script>
+
+{% schema %}
+  {
+    "name": "Lookbook Pro Ajax",
+    "settings": [
+      { "type": "text", "id": "title", "label": "Heading", "default": "Tisso vision in the wild" }
+    ],
+    "blocks": [
+      {
+        "type": "image",
+        "name": "Product Spot",
+        "settings": [
+          { "type": "image_picker", "id": "image", "label": "Gallery Image" },
+          { "type": "product", "id": "product", "label": "Link Product" }
+        ]
+      }
+    ],
+    "presets": [{ "name": "Lookbook Pro Ajax" }]
+  }
+{% endschema %}
