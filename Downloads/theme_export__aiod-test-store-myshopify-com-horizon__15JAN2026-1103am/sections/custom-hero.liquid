@@ -1,1 +1,108 @@
+<section class="hero-section section-{{ section.id }}">
+  <div class="hero-container">
+    
+    <div class="hero-image-wrapper">
+      <img src="{{ section.settings.image_desktop | image_url: width: 2000 }}" 
+           class="hero-image desktop-only" alt="Banner Desktop">
+      <img src="{{ section.settings.image_mobile | image_url: width: 800 }}" 
+           class="hero-image mobile-only" alt="Banner Mobile">
+    </div>
 
+    <div class="hero-content">
+      <h2 class="hero-title">{{ section.settings.title }}</h2>
+      <p class="hero-description">{{ section.settings.description }}</p>
+      
+      {% if section.settings.button_label != blank %}
+        <a href="{{ section.settings.button_link }}" class="hero-button">
+          {{ section.settings.button_label }} <span class="arrow">→</span>
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+
+<style>
+  .hero-section { position: relative; width: 100%; overflow: hidden; background: #fff; }
+  .hero-container { display: flex; align-items: flex-end; min-height: 700px; padding: 60px; }
+  
+  .hero-image-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+  .hero-image { width: 100%; height: 100%; object-fit: cover; }
+  
+  .hero-content { 
+    position: relative; z-index: 2; 
+    max-width: 400px; 
+    text-align: left;
+    background: rgba(255,255,255,0.8); /* Optional: text readability ke liye */
+    padding: 20px;
+  }
+
+  .hero-title { font-size: 48px; font-weight: bold; margin-bottom: 20px; color: #000; }
+  .hero-description { font-size: 16px; line-height: 1.5; margin-bottom: 30px; color: #333; }
+  
+  .hero-button {
+    display: inline-flex; align-items: center;
+    background: #000; color: #fff;
+    padding: 12px 30px; text-decoration: none;
+    font-weight: bold; text-transform: uppercase;
+  }
+  .hero-button .arrow { margin-left: 10px; transition: transform 0.3s; }
+  .hero-button:hover .arrow { transform: translateX(5px); }
+
+  /* Responsive Logic */
+  .mobile-only { display: none; }
+  @media (max-width: 768px) {
+    .desktop-only { display: none; }
+    .mobile-only { display: block; }
+    .hero-container { padding: 30px; min-height: 400px; }
+    .hero-title { font-size: 32px; }
+  }
+</style>
+
+
+{% schema %}
+{
+  "name": "Dynamic Gift Guide",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image_desktop",
+      "label": "Desktop Image (1600x900)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_mobile",
+      "label": "Mobile Image (800x1000)"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "The Gift Guide"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description Text",
+      "default": "Discover Joy: Your Ultimate Holiday Gift Destination."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button Text",
+      "default": "SHOP NOW"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button Link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Dynamic Gift Guide",
+      "category": "Image"
+    }
+  ]
+}
+{% endschema %}
